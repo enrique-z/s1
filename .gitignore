@@ -8,9 +8,6 @@ wandb/
 # Installation instructions
 instructions_install_ooba.md
 
-# Test files
-test_simple.py
-
 # Deployment documentation
 DEPLOY.md
 
