@@ -14,3 +14,6 @@ gradio==4.44.0
 trl==0.12.0
 # Trouble shooting: deepseed engine issues
 # pydantic==1.10.9
+
+# System requirements (install via apt-get or your system package manager):
+# sudo apt-get install zip unzip

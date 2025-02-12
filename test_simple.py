@@ -3,6 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import time
 from datetime import datetime
 import os
+import sys
+import tempfile
 
 # Create responses directory if it doesn't exist
 os.makedirs('responses', exist_ok=True)
@@ -53,6 +55,44 @@ def save_response(question: str, response: str, generation_time: float) -> str:
     print(f"\nResponse saved to: {filename}")
     return filename
 
+def get_multiline_input():
+    """Get multi-line input from user. End with 'END' on a new line."""
+    print("Enter your question (type 'END' on a new line when finished):")
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line.strip() == 'END':
+                break
+            lines.append(line)
+        except EOFError:
+            break
+    return '\n'.join(lines)
+
+def get_paste_input():
+    """Get pasted input from user with clear instructions"""
+    print("\nPaste Mode Instructions:")
+    print("1. First, enter your instruction (e.g., 'analyze following text', 'summarize this article')")
+    print("2. Then paste your text")
+    print("3. Type 'DONE' on a new line when finished")
+    
+    print("\nEnter your instruction:")
+    instruction = input().strip()
+    
+    print("\nNow paste your text:")
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line.strip().upper() == 'DONE':
+                break
+            lines.append(line)
+        except EOFError:
+            break
+    
+    text = '\n'.join(lines)
+    return f"{instruction}:\n\n{text}"
+
 # Initialize conversation history
 conversation_history = []
 
@@ -64,7 +104,7 @@ def get_response(question: str) -> str:
     
     # Format all messages including history
     messages = [
-        {"role": "system", "content": "You are a helpful assistant. You should respond only in english language, never in chinese. You should think step-by-step."}
+        {"role": "system", "content": "You are a helpful assistant. You should respond only in english language, never in chinese. You should think step-by-step and analyze text thoroughly when asked. For analysis tasks, break down your response into clear sections."}
     ] + conversation_history
     
     # Generate response
@@ -111,21 +151,49 @@ def get_response(question: str) -> str:
     return response
 
 print("\n=== S1-32B Interactive Chat ===")
-print("Type your questions below. Type 'exit' to quit. Type 'clear' to clear conversation history.")
+print("Commands:")
+print("- Type 'exit' to quit")
+print("- Type 'clear' to clear conversation history")
+print("- Type 'long' to enter multi-line question mode")
+print("- Type 'paste' to open editor for pasting long text")
+print("- Type 'load' to load question from file")
 print("----------------------------------------")
 
 while True:
     try:
-        question = input("\nYou: ").strip()
-        if question.lower() in ['exit', 'quit', 'bye']:
+        command = input("\nYou: ").strip()
+        
+        if command.lower() in ['exit', 'quit', 'bye']:
             print("Goodbye!")
             break
-        if question.lower() == 'clear':
+            
+        if command.lower() == 'clear':
             conversation_history = []
             print("Conversation history cleared!")
             continue
+            
+        if command.lower() == 'long':
+            question = get_multiline_input()
+        elif command.lower() == 'paste':
+            question = get_paste_input()
+        elif command.lower() == 'load':
+            filename = input("Enter path to question file: ").strip()
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    question = f.read()
+                print(f"Loaded question from {filename}")
+            except Exception as e:
+                print(f"Error loading file: {str(e)}")
+                continue
+        else:
+            question = command
+            
         if not question:
             continue
+            
+        # Add analysis instruction if it's a long text
+        if len(question.split()) > 50:  # If text is longer than 50 words
+            question = "Please analyze the following text thoroughly:\n\n" + question
             
         response = get_response(question)
         print("\nAssistant:", response)
