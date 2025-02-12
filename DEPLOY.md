@@ -1,16 +1,15 @@
 # Quick Deployment Guide for TensorDock
 
-## Initial Setup
+## First Time Setup
 
 1. Create TensorDock instance:
    - Select A100 GPU (80GB)
    - Ubuntu 22.04 LTS
    - At least 200GB storage
-   - Mount HF cache volume if available
 
-2. Clone your forked repository:
+2. Clone your fork:
 ```bash
-git clone https://github.com/YOUR_USERNAME/s1.git
+git clone https://github.com/enrique-z/s1.git
 cd s1
 ```
 
@@ -18,44 +17,88 @@ cd s1
 ```bash
 chmod +x setup.sh
 ./setup.sh
-```
-
-4. Activate environment:
-```bash
 source activate
 ```
 
-## Using Pre-downloaded Model
+4. Model Setup (125GB) - Recommended to do both:
 
-If you have a TensorDock volume with the model:
-1. Mount the volume during instance creation
-2. Link the model files to HF cache:
+   Step 1 - Create TensorDock Volume (Primary Method):
+   ```bash
+   # Create directory structure
+   mkdir -p ~/.cache/huggingface/models/simplescaling/
+   cd ~/.cache/huggingface/models/simplescaling/
+
+   # Download model
+   python3 -c "from transformers import AutoModelForCausalLM, AutoTokenizer; \
+   model = AutoModelForCausalLM.from_pretrained('simplescaling/s1-32B', torch_dtype='auto', device_map='auto'); \
+   tokenizer = AutoTokenizer.from_pretrained('simplescaling/s1-32B')"
+
+   # Create TensorDock volume from this directory
+   # Name it something like 's1-32b-cache'
+   ```
+
+   Step 2 - Backup to Hugging Face Cache (Secondary Method):
+   ```bash
+   # This happens automatically when you run any script
+   # Just run a quick test to verify:
+   cd ~/s1
+   python test_model.py
+   ```
+
+## Subsequent Deployments
+
+### On TensorDock (Fastest):
+1. Create instance with:
+   - A100 GPU (80GB)
+   - Ubuntu 22.04 LTS
+   - Mount your 's1-32b-cache' volume to ~/.cache/huggingface/
+
+2. Quick setup:
 ```bash
-mkdir -p ~/.cache/huggingface/
-ln -s /path/to/volume/s1-32B ~/.cache/huggingface/
+git clone https://github.com/enrique-z/s1.git
+cd s1
+./setup.sh
+source activate
+python test_simple.py  # Should load instantly
 ```
 
-## Creating Backup Image
+### On Other Platforms:
+1. Create instance with:
+   - A100 GPU (80GB or similar)
+   - Ubuntu 22.04 LTS
 
-1. Clean unnecessary files:
+2. Standard setup:
 ```bash
-rm -rf .venv/lib/python*/site-packages/torch/test
-rm -rf .venv/lib/python*/site-packages/*/tests
+git clone https://github.com/enrique-z/s1.git
+cd s1
+./setup.sh
+source activate
+python test_simple.py  # Will download model first time
 ```
 
-2. Save HF cache if needed:
-```bash
-mv ~/.cache/huggingface/ ~/hf_cache_backup/
-```
+## Available Scripts
 
-3. Create TensorDock image from instance
+- `test_simple.py`: Interactive command-line chat (recommended)
+- `web_ui.py`: Web interface on port 7860
+- `test_model.py`: Basic model test
+- `test_model_deep.py`: Complex reasoning test
 
-## Restore from Backup
+## Troubleshooting
 
-1. Launch new instance from saved image
-2. Restore HF cache if backed up:
-```bash
-mv ~/hf_cache_backup/ ~/.cache/huggingface/
-```
+1. CUDA/Torch issues:
+   ```bash
+   pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118
+   ```
 
-3. Run your scripts! 
+2. Python version issues:
+   ```bash
+   # Already handled by setup.sh
+   cd .venv/bin && ln -sf python3.11 python3
+   ```
+
+3. Model loading errors:
+   ```bash
+   # Clear cache and retry
+   rm -rf ~/.cache/huggingface/models/simplescaling/s1-32B
+   # Then run any script to redownload
+   ``` 

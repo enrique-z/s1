@@ -2,3 +2,12 @@ ckpts/
 
 wandb/
 
+# Environment variables
+.env
+
+# Installation instructions
+instructions_install_ooba.md
+
+# Test files
+test_simple.py
+
